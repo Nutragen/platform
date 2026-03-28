@@ -399,6 +399,7 @@ tbody td{padding:14px 16px;font-size:13px;color:var(--text)}
 #db-shopify-paso1,#db-shopify-paso2,#db-shopify-kit{width:100%}
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -425,31 +426,27 @@ tbody td{padding:14px 16px;font-size:13px;color:var(--text)}
       <div id="panel-login" class="auth-panel active">
         <div class="form-group"><label>Correo Electrónico</label><input type="email" id="login-email" placeholder="tu@correo.com"></div>
         <div class="form-group"><label>Contraseña</label><input type="password" id="login-pass" placeholder="••••••••"></div>
-        <button class="btn-gold" onclick="doLogin()">Entrar a Nutragen Central</button>
+        <div id="login-error" style="display:none;background:#FEE2E2;border:1px solid #EF4444;border-radius:8px;padding:10px 14px;font-size:13px;color:#DC2626;margin-bottom:12px"></div>
+        <button class="btn-gold" id="login-btn" onclick="doLogin()">Entrar a Nutragen Central</button>
+        <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--text-muted)">
+          ¿Olvidaste tu contraseña? <span style="color:var(--gold);cursor:pointer" onclick="resetPassword()">Recuperar</span>
+        </div>
         <div class="demo-accounts">
-          <p>Acceso Rápido</p>
+          <p>Acceso Admin</p>
           <div class="demo-btns">
             <button class="demo-btn admin" type="button" onclick="quickLogin('admin')">⚡ Super Admin</button>
-            <button class="demo-btn member" type="button" onclick="quickLogin('member')">👤 Miembro</button>
-            <button class="demo-btn dist" type="button" onclick="quickLogin('distributor')">🤝 Distribuidor</button>
           </div>
         </div>
       </div>
       <div id="panel-register" class="auth-panel">
-        <div class="form-group"><label>Nombre Completo</label><input type="text" id="reg-name" placeholder="Tu nombre"></div>
+        <div class="form-group"><label>Nombre Completo</label><input type="text" id="reg-name" placeholder="Tu nombre completo"></div>
         <div class="form-group"><label>Correo Electrónico</label><input type="email" id="reg-email" placeholder="tu@correo.com"></div>
         <div class="form-group"><label>Contraseña</label><input type="password" id="reg-pass" placeholder="Mínimo 8 caracteres"></div>
         <div class="form-group"><label>WhatsApp</label><input type="tel" id="reg-phone" placeholder="+52 55 0000 0000"></div>
-        <div class="form-group">
-          <label>Tipo de Cuenta</label>
-          <div class="role-selector">
-            <div class="role-card selected" onclick="selectRegRole('member',this)"><div class="role-icon">👤</div><div class="role-label">Miembro</div><div class="role-desc">Ver contenido</div></div>
-            <div class="role-card dist-card" onclick="selectRegRole('distributor',this)"><div class="role-icon">🤝</div><div class="role-label">Distribuidor</div><div class="role-desc">Ver + Ganar</div></div>
-            <div class="role-card admin-card" onclick="selectRegRole('admin',this)"><div class="role-icon">⚡</div><div class="role-label">Admin</div><div class="role-desc">Control total</div></div>
-          </div>
-        </div>
-        <button class="btn-gold" onclick="doRegister()">Crear Cuenta — $499 MXN/mes</button>
-        <div class="auth-price">Equivalente a <span>$24.99 USD</span> · Sin permanencia</div>
+        <div id="reg-error" style="display:none;background:#FEE2E2;border:1px solid #EF4444;border-radius:8px;padding:10px 14px;font-size:13px;color:#DC2626;margin-bottom:12px"></div>
+        <button class="btn-gold" id="reg-btn" onclick="doRegister()">Crear Cuenta y Pagar — $149 MXN/mes</button>
+        <div class="auth-price">Equivalente a <span>~$7 USD</span> · Sin permanencia · Cancela cuando quieras</div>
+        <div style="text-align:center;margin-top:10px;font-size:11px;color:var(--text-muted)">🔒 Pago seguro procesado por Stripe</div>
       </div>
     </div>
   </div>
@@ -716,49 +713,176 @@ document.getElementById('logo-auth').src=LOGO_DATA;
 document.getElementById('logo-dash').src=LOGO_DATA;
 
 // ── AUTH STATE ──
+// ── SUPABASE + STRIPE AUTH SYSTEM ──
 let currentUser={name:'',email:'',role:'member'};
-let regRole='member';
+let supabaseClient = null;
+
+async function initSupabase(){
+  if(supabaseClient) return supabaseClient;
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
+    window._stripeKey = cfg.stripeKey;
+  } catch(e) { console.error('Config error:', e); }
+  return supabaseClient;
+}
 
 function switchAuthTab(t){
   document.querySelectorAll('.auth-tab').forEach((el,i)=>el.classList.toggle('active',i===(t==='login'?0:1)));
   document.getElementById('panel-login').classList.toggle('active',t==='login');
   document.getElementById('panel-register').classList.toggle('active',t==='register');
 }
-function selectRegRole(role,card){
-  regRole=role;
-  document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('selected'));
-  card.classList.add('selected');
-}
+
+// Admin quick login
 function quickLogin(role){
-  const names={admin:'Admin Nutragen',member:'Ana García',distributor:'Carlos Medina'};
-  const emails={admin:'admin@nutragen.mx',member:'miembro@nutragen.mx',distributor:'distribuidor@nutragen.mx'};
+  const names={admin:'Admin Nutragen'};
+  const emails={admin:'admin@nutragen.mx'};
   currentUser={name:names[role],email:emails[role],role};
   enterDashboard();
 }
-function doLogin(){
-  const email=document.getElementById('login-email').value;
-  const pass=document.getElementById('login-pass').value;
-  if(!email){showToast('Ingresa tu correo');return;}
-  // Admin credentials
+
+async function doLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-btn');
+  errEl.style.display='none';
+
+  if(!email || !pass){ errEl.textContent='Completa todos los campos.'; errEl.style.display='block'; return; }
+
+  // Admin shortcut
   if(email==='admin@nutragen.mx' && pass==='Nutragen2025!'){
     currentUser={name:'Admin Nutragen',email,role:'admin'};
-    enterDashboard();
-    return;
+    enterDashboard(); return;
   }
-  currentUser={name:email.split('@')[0],email,role:'member'};
-  enterDashboard();
+
+  btn.textContent='Entrando...'; btn.disabled=true;
+  const sb = await initSupabase();
+  if(!sb){ btn.textContent='Entrar a Nutragen Central'; btn.disabled=false; errEl.textContent='Error de conexión. Intenta de nuevo.'; errEl.style.display='block'; return; }
+
+  try {
+    const {data, error} = await sb.auth.signInWithPassword({email, password:pass});
+    if(error){ throw new Error(error.message); }
+
+    // Get profile
+    const {data: profile} = await sb.from('profiles').select('*').eq('id', data.user.id).single();
+    const membershipActive = profile?.membership_status === 'active';
+
+    if(!membershipActive && profile?.role !== 'admin'){
+      btn.textContent='Entrar a Nutragen Central'; btn.disabled=false;
+      errEl.textContent='Tu membresía no está activa. Por favor completa tu pago.'; errEl.style.display='block';
+      return;
+    }
+
+    currentUser = {
+      name:  profile?.name || data.user.email.split('@')[0],
+      email: data.user.email,
+      role:  profile?.role || 'member',
+      id:    data.user.id,
+    };
+    enterDashboard();
+  } catch(err){
+    btn.textContent='Entrar a Nutragen Central'; btn.disabled=false;
+    errEl.textContent = err.message.includes('Invalid') ? 'Correo o contraseña incorrectos.' : err.message;
+    errEl.style.display='block';
+  }
 }
-function doRegister(){
-  const name=document.getElementById('reg-name').value,email=document.getElementById('reg-email').value;
-  if(!name||!email){showToast('Completa los campos requeridos');return;}
-  currentUser={name,email,role:regRole};
-  enterDashboard();
+
+async function doRegister(){
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-pass').value;
+  const phone = document.getElementById('reg-phone').value.trim();
+  const errEl = document.getElementById('reg-error');
+  const btn   = document.getElementById('reg-btn');
+  errEl.style.display='none';
+
+  if(!name||!email||!pass){ errEl.textContent='Por favor completa todos los campos.'; errEl.style.display='block'; return; }
+  if(pass.length < 8){ errEl.textContent='La contraseña debe tener al menos 8 caracteres.'; errEl.style.display='block'; return; }
+
+  btn.textContent='Creando cuenta...'; btn.disabled=true;
+  const sb = await initSupabase();
+  if(!sb){ btn.textContent='Crear Cuenta y Pagar — $149 MXN/mes'; btn.disabled=false; return; }
+
+  try {
+    // 1. Create user in Supabase Auth
+    const {data, error} = await sb.auth.signUp({
+      email, password: pass,
+      options: { data: { name, phone } }
+    });
+    if(error) throw new Error(error.message);
+
+    const userId = data.user.id;
+
+    // 2. Create Stripe checkout session
+    btn.textContent='Redirigiendo al pago...';
+    const res = await fetch('/api/checkout', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({email, userId, name})
+    });
+    const checkout = await res.json();
+    if(checkout.url){
+      window.location.href = checkout.url;
+    } else {
+      throw new Error('No se pudo crear la sesión de pago.');
+    }
+  } catch(err){
+    btn.textContent='Crear Cuenta y Pagar — $149 MXN/mes'; btn.disabled=false;
+    errEl.textContent = err.message.includes('already registered') ? 'Este correo ya está registrado. Inicia sesión.' : err.message;
+    errEl.style.display='block';
+  }
 }
-function doLogout(){
+
+async function resetPassword(){
+  const email = document.getElementById('login-email').value.trim();
+  if(!email){ showToast('Ingresa tu correo primero'); return; }
+  const sb = await initSupabase();
+  await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/central.html' });
+  showToast('✅ Revisa tu correo para restablecer tu contraseña');
+}
+
+async function doLogout(){
+  const sb = await initSupabase();
+  if(sb) await sb.auth.signOut();
   document.getElementById('dashboard').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
   chatHistory=[];
 }
+
+// Check if returning from Stripe success
+window.addEventListener('load', async function(){
+  const params = new URLSearchParams(window.location.search);
+  if(params.get('status')==='success'){
+    showToast('🎉 ¡Pago exitoso! Bienvenido a Nutragen Central');
+    // Clear URL params
+    window.history.replaceState({}, '', '/central.html');
+    // Switch to login tab
+    switchAuthTab('login');
+  }
+  if(params.get('status')==='cancelled'){
+    showToast('El pago fue cancelado. Puedes intentarlo de nuevo.');
+    window.history.replaceState({}, '', '/central.html');
+  }
+  // Check for existing Supabase session
+  const sb = await initSupabase();
+  if(sb){
+    const {data:{session}} = await sb.auth.getSession();
+    if(session){
+      const {data:profile} = await sb.from('profiles').select('*').eq('id', session.user.id).single();
+      if(profile?.membership_status === 'active' || profile?.role === 'admin'){
+        currentUser = {
+          name:  profile?.name || session.user.email.split('@')[0],
+          email: session.user.email,
+          role:  profile?.role || 'member',
+          id:    session.user.id,
+        };
+        enterDashboard();
+      }
+    }
+  }
+});
 
 function enterDashboard(){
   document.getElementById('auth-screen').style.display='none';
