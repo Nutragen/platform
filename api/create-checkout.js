@@ -1,5 +1,5 @@
 // api/create-checkout.js
-// Creates a Stripe Checkout session for $149 MXN/month membership
+import Stripe from 'stripe';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -12,9 +12,7 @@ export default async function handler(req, res) {
   const { email, userId, name } = req.body || {};
   if (!email || !userId) return res.status(400).json({ error: 'Email and userId required' });
 
-  const stripe = await import('stripe').then(m => m.default(process.env.STRIPE_SECRET_KEY));
-
-  // Get the base URL for redirect
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
   const baseUrl = req.headers.origin || 'https://www.nutragencentral.com';
 
   try {
@@ -28,24 +26,19 @@ export default async function handler(req, res) {
           product_data: {
             name: 'Nutragen Central — Membresía Mensual',
             description: 'Acceso completo: Athena IA, videos, meditaciones, guías y tienda exclusiva',
-            images: [],
           },
-          unit_amount: 14900, // $149 MXN in centavos
+          unit_amount: 14900,
           recurring: { interval: 'month' },
         },
         quantity: 1,
       }],
-      metadata: {
-        userId,
-        name: name || '',
-      },
-      success_url: `${baseUrl}/central.html?session_id={CHECKOUT_SESSION_ID}&status=success`,
+      metadata: { userId, name: name || '' },
+      success_url: `${baseUrl}/central.html?status=success`,
       cancel_url:  `${baseUrl}/central.html?status=cancelled`,
       locale: 'es',
     });
 
     res.status(200).json({ url: session.url });
-
   } catch (err) {
     console.error('Stripe error:', err);
     res.status(500).json({ error: err.message });
