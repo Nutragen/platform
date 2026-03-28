@@ -15,7 +15,7 @@ export default async function handler(req, res) {
   const stripe = await import('stripe').then(m => m.default(process.env.STRIPE_SECRET_KEY));
 
   // Get the base URL for redirect
-  const baseUrl = req.headers.origin || 'https://nutragencentral.vercel.app';
+  const baseUrl = req.headers.origin || 'https://www.nutragencentral.com';
 
   try {
     const session = await stripe.checkout.sessions.create({
