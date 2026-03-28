@@ -400,6 +400,7 @@ tbody td{padding:14px 16px;font-size:13px;color:var(--text)}
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="/api/init"></script>
 </head>
 <body>
 
@@ -717,15 +718,21 @@ document.getElementById('logo-dash').src=LOGO_DATA;
 let currentUser={name:'',email:'',role:'member'};
 let supabaseClient = null;
 
-async function initSupabase(){
+function initSupabase(){
   if(supabaseClient) return supabaseClient;
   try {
-    const res = await fetch('/api/config');
-    const cfg = await res.json();
+    const cfg = window.__NC_CONFIG__;
+    if(!cfg || !cfg.supabaseUrl || !cfg.supabaseKey){
+      console.error('[Nutragen] Missing Supabase config. Check Vercel environment variables.');
+      return null;
+    }
     supabaseClient = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseKey);
     window._stripeKey = cfg.stripeKey;
-  } catch(e) { console.error('Config error:', e); }
-  return supabaseClient;
+    return supabaseClient;
+  } catch(e) {
+    console.error('[Nutragen] Supabase init error:', e);
+    return null;
+  }
 }
 
 function switchAuthTab(t){
@@ -758,8 +765,8 @@ async function doLogin(){
   }
 
   btn.textContent='Entrando...'; btn.disabled=true;
-  const sb = await initSupabase();
-  if(!sb){ btn.textContent='Entrar a Nutragen Central'; btn.disabled=false; errEl.textContent='Error de conexión. Intenta de nuevo.'; errEl.style.display='block'; return; }
+  const sb = initSupabase();
+  if(!sb){ errEl.textContent='Error de configuración del servidor. Contacta soporte.'; errEl.style.display='block'; btn.textContent='Entrar a Nutragen Central'; btn.disabled=false; return; }
 
   try {
     const {data, error} = await sb.auth.signInWithPassword({email, password:pass});
@@ -802,8 +809,8 @@ async function doRegister(){
   if(pass.length < 8){ errEl.textContent='La contraseña debe tener al menos 8 caracteres.'; errEl.style.display='block'; return; }
 
   btn.textContent='Creando cuenta...'; btn.disabled=true;
-  const sb = await initSupabase();
-  if(!sb){ btn.textContent='Crear Cuenta y Pagar — $149 MXN/mes'; btn.disabled=false; return; }
+  const sb = initSupabase();
+  if(!sb){ errEl.textContent='Error de configuración. Contacta soporte: admin@nutragen.mx'; errEl.style.display='block'; btn.textContent='Crear Cuenta y Pagar — $149 MXN/mes'; btn.disabled=false; return; }
 
   try {
     // 1. Create user in Supabase Auth
@@ -854,13 +861,13 @@ async function doRegister(){
 async function resetPassword(){
   const email = document.getElementById('login-email').value.trim();
   if(!email){ showToast('Ingresa tu correo primero'); return; }
-  const sb = await initSupabase();
+  const sb = initSupabase();
   await sb.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin + '/central.html' });
   showToast('✅ Revisa tu correo para restablecer tu contraseña');
 }
 
 async function doLogout(){
-  const sb = await initSupabase();
+  const sb = initSupabase();
   if(sb) await sb.auth.signOut();
   document.getElementById('dashboard').style.display='none';
   document.getElementById('auth-screen').style.display='flex';
@@ -870,6 +877,13 @@ async function doLogout(){
 // Check if returning from Stripe success
 window.addEventListener('load', async function(){
   const params = new URLSearchParams(window.location.search);
+
+  // Auto-open register tab if coming from landing page
+  if(params.get('action')==='register'){
+    window.history.replaceState({}, '', '/central.html');
+    setTimeout(()=>switchAuthTab('register'), 100);
+  }
+
   if(params.get('status')==='success'){
     showToast('🎉 ¡Pago exitoso! Bienvenido a Nutragen Central');
     // Clear URL params
@@ -882,7 +896,7 @@ window.addEventListener('load', async function(){
     window.history.replaceState({}, '', '/central.html');
   }
   // Check for existing Supabase session
-  const sb = await initSupabase();
+  const sb = initSupabase();
   if(sb){
     const {data:{session}} = await sb.auth.getSession();
     if(session){
