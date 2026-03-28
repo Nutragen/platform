@@ -807,30 +807,46 @@ async function doRegister(){
 
   try {
     // 1. Create user in Supabase Auth
+    btn.textContent='Creando cuenta...';
     const {data, error} = await sb.auth.signUp({
       email, password: pass,
       options: { data: { name, phone } }
     });
-    if(error) throw new Error(error.message);
+    if(error) throw new Error('Supabase: ' + error.message);
+    if(!data.user) throw new Error('No se pudo crear el usuario. Intenta de nuevo.');
 
     const userId = data.user.id;
 
     // 2. Create Stripe checkout session
     btn.textContent='Redirigiendo al pago...';
-    const res = await fetch('/api/checkout', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({email, userId, name})
-    });
+    let res;
+    try {
+      res = await fetch('/api/checkout', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({email, userId, name})
+      });
+    } catch(fetchErr) {
+      throw new Error('Error de conexión con el servidor de pagos. Intenta de nuevo.');
+    }
+
+    if(!res.ok) {
+      const errData = await res.json().catch(()=>({}));
+      throw new Error('Error del servidor: ' + (errData.error || res.status));
+    }
+
     const checkout = await res.json();
     if(checkout.url){
       window.location.href = checkout.url;
     } else {
-      throw new Error('No se pudo crear la sesión de pago.');
+      throw new Error(checkout.error || 'No se recibió URL de pago. Contacta soporte.');
     }
   } catch(err){
     btn.textContent='Crear Cuenta y Pagar — $149 MXN/mes'; btn.disabled=false;
-    errEl.textContent = err.message.includes('already registered') ? 'Este correo ya está registrado. Inicia sesión.' : err.message;
+    const msg = err.message.includes('already registered') || err.message.includes('already been registered')
+      ? 'Este correo ya está registrado. Inicia sesión.'
+      : err.message;
+    errEl.textContent = msg;
     errEl.style.display='block';
   }
 }
