@@ -815,7 +815,7 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:60px 5v
       <a onclick="scrollTo('contenido')">Meditaciones</a>
       <a onclick="scrollTo('contenido')">Guías PDF</a>
       <a onclick="scrollTo('contenido')">Recetario</a>
-      <a onclick="scrollTo('chat-section')">Asistente IA</a>
+      <a onclick="document.getElementById('chat-section').scrollIntoView({behavior:'smooth'})">Asistente IA</a>
     </div>
     <div class="footer-col">
       <h4>Empresa</h4>
@@ -840,7 +840,7 @@ footer{background:var(--dark);border-top:1px solid var(--border);padding:60px 5v
 </footer>
 
 <!-- Floating chat -->
-<button class="float-chat-btn" onclick="scrollTo('chat-section')" title="Hablar con Athena">
+<button class="float-chat-btn" onclick="document.getElementById('chat-section').scrollIntoView({behavior:'smooth'})" title="Hablar con Athena">
   <div class="float-chat-badge"></div>
   <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
 </button>
