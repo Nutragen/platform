@@ -1,8 +1,1 @@
-{
-  "rewrites": [
-    { "source": "/chat.php",     "destination": "/api/chat" },
-    { "source": "/api/checkout", "destination": "/api/create-checkout" },
-    { "source": "/api/webhook",  "destination": "/api/webhook" },
-    { "source": "/central",      "destination": "/central.html" }
-  ]
-}
+{"rewrites":[{"source":"/chat.php","destination":"/api/chat"},{"source":"/api/checkout","destination":"/api/create-checkout"},{"source":"/api/webhook","destination":"/api/webhook"},{"source":"/central","destination":"/central.html"}]}
