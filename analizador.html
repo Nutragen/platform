@@ -194,6 +194,35 @@
 
     .hidden { display: none !important; }
 
+
+    /* ── Step-down box (Paso 1 fallback for completo) ── */
+    .stepdown-box {
+      display: none;
+      margin-top: 16px;
+      border: 1.5px solid var(--cream2);
+      border-radius: 16px;
+      padding: 20px 16px;
+      background: #fdfaf5;
+      text-align: center;
+    }
+    .stepdown-divider {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+    }
+    .stepdown-divider::before, .stepdown-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--cream2);
+    }
+    .stepdown-divider span {
+      font-family: 'Montserrat', sans-serif; font-size: 9px;
+      letter-spacing: 2px; color: #bbb; font-weight: 500; white-space: nowrap;
+    }
+    .stepdown-title {
+      font-size: 15px; font-weight: 400; color: var(--dark); margin-bottom: 4px;
+    }
+    .stepdown-sub {
+      font-family: 'Montserrat', sans-serif; font-size: 12px;
+      color: var(--mid); font-weight: 300; line-height: 1.5; margin-bottom: 14px;
+    }
+
     /* Shopify iframe override */
     .shopify-buy-frame--toggle { display: none !important; }
   </style>
@@ -300,6 +329,16 @@
       </div>
 
       <p class="small-disclaimer" id="result-disclaimer"></p>
+
+      <!-- Step-down: Paso 1 option when completo is recommended -->
+      <div class="stepdown-box" id="stepdown-box">
+        <div class="stepdown-divider"><span>¿PRECIO ES UNA BARRERA?</span></div>
+        <p class="stepdown-title">Comienza tu sanación desde la raíz</p>
+        <p class="stepdown-sub">¿Te gustaría guardar la recomendación de protocolo y recibir tu análisis de psoriasis en tu WhatsApp o correo electrónico para consultarlo con más comodidad cuando lo necesites?<br><br>
+        Mientras tanto, la <strong>Crema Antibrotes Paso 1</strong> es el primer paso real hacia el alivio natural. Puedes comenzar con ella hoy.</p>
+        <div id="shopify-btn-paso1"></div>
+      </div>
+
       <button class="btn btn-outline" id="btn-reset">Hacer otro análisis</button>
     </div>
 
@@ -492,6 +531,13 @@ function showResult(r) {
   // Load Shopify button
   const productKey = full ? 'paquete' : 'paso1';
   loadShopifyButton(productKey);
+
+  // Show Paso 1 fallback option only when completo is recommended
+  const stepdownBox = document.getElementById('stepdown-box');
+  stepdownBox.style.display = full ? 'block' : 'none';
+  if (full) {
+    loadShopifyButtonInto('paso1', 'shopify-btn-paso1');
+  }
 }
 
 // ── Shopify Buy Button ────────────────────────────────────────────────────────
@@ -533,6 +579,63 @@ function loadShopifyButton(key) {
             buttonDestination: 'checkout',
             contents: { img: false, title: false, price: false },
             text: { button: '¡COMPRAR AHORA!' },
+          },
+          cart:   { text: { total: 'Subtotal', button: 'Finalizar Compra' } },
+          toggle: {},
+        },
+      });
+    });
+  }
+
+  if (!window.ShopifyBuy) {
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
+    s.onload = initBtn;
+    document.head.appendChild(s);
+  } else {
+    initBtn();
+  }
+}
+
+// ── Shopify Button (generic target) ─────────────────────────────────────────
+function loadShopifyButtonInto(key, targetId) {
+  const { id } = PRODUCTS[key];
+  const node = document.getElementById(targetId);
+  if (!node) return;
+  node.innerHTML = '';
+
+  function initBtn() {
+    if (!window.ShopifyBuy || !window.ShopifyBuy.UI) return setTimeout(initBtn, 200);
+    node.innerHTML = '';
+    const client = window.ShopifyBuy.buildClient({
+      domain: SHOPIFY_DOMAIN,
+      storefrontAccessToken: SHOPIFY_TOKEN,
+    });
+    window.ShopifyBuy.UI.onReady(client).then(ui => {
+      ui.createComponent('product', {
+        id,
+        node,
+        moneyFormat: '%24%20%7B%7Bamount%7D%7D',
+        options: {
+          product: {
+            styles: {
+              product: { '@media (min-width: 601px)': { 'max-width': '100%', 'margin-left': '0px' } },
+              button: {
+                'background-color': '#8a6a1a',
+                'font-family': "'Montserrat', sans-serif",
+                'font-size': '12px',
+                'letter-spacing': '2px',
+                'padding-top': '14px',
+                'padding-bottom': '14px',
+                'border-radius': '12px',
+                ':hover': { 'background-color': '#b8963e' },
+                ':focus': { 'background-color': '#b8963e' },
+              },
+            },
+            buttonDestination: 'checkout',
+            contents: { img: false, title: false, price: false },
+            text: { button: '¡COMENZAR CON PASO 1!' },
           },
           cart:   { text: { total: 'Subtotal', button: 'Finalizar Compra' } },
           toggle: {},
