@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Analizador de Protocolo · Nutragen</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --gold:   #8a6a1a;
+      --gold-l: #b8963e;
+      --cream:  #f2ece0;
+      --cream2: #e8e0d0;
+      --dark:   #2c2015;
+      --mid:    #6b5535;
+    }
+
+    @keyframes spin    { to { transform: rotate(360deg); } }
+    @keyframes fadeUp  { from { opacity:0; transform:translateY(18px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeIn  { from { opacity:0; } to { opacity:1; } }
+
+    body {
+      min-height: 100vh;
+      background: var(--cream);
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      color: var(--dark);
+      position: relative;
+    }
+
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background:
+        radial-gradient(ellipse at 15% 15%, #d4b47618 0%, transparent 55%),
+        radial-gradient(ellipse at 85% 85%, #c9a95418 0%, transparent 55%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .wrap { max-width: 540px; margin: 0 auto; position: relative; z-index: 1; padding: 0 16px; }
+
+    /* ── Header ── */
+    header { padding: 32px 0 8px; }
+    .logo-row { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .logo-orb {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: radial-gradient(circle at 40% 40%, var(--gold-l), var(--gold));
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 16px; font-weight: 700;
+      flex-shrink: 0;
+    }
+    .logo-text { font-family: 'Montserrat', sans-serif; font-size: 13px; letter-spacing: 4px; color: var(--dark); font-weight: 400; }
+    .eyebrow { font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 3px; color: var(--gold); font-weight: 500; margin-bottom: 10px; }
+    h1 { font-size: 34px; font-weight: 300; line-height: 1.2; margin-bottom: 4px; }
+    h1 em { font-style: italic; color: var(--gold-l); font-weight: 400; }
+    .subhead { font-size: 16px; color: #9e8060; font-weight: 300; }
+
+    /* ── Disclaimer bar ── */
+    .disclaimer-bar {
+      background: var(--cream2);
+      border-top: 1px solid #d9cdb8; border-bottom: 1px solid #d9cdb8;
+      padding: 10px 0; display: flex; gap: 10px; align-items: flex-start;
+      margin: 16px 0;
+    }
+    .disclaimer-bar span { color: var(--gold); font-size: 10px; margin-top: 2px; flex-shrink: 0; }
+    .disclaimer-bar p { font-family: 'Montserrat', sans-serif; font-size: 11px; color: var(--mid); line-height: 1.6; font-weight: 300; }
+
+    /* ── Card ── */
+    .card {
+      background: #fff;
+      border-radius: 20px;
+      box-shadow: 0 12px 48px #8a6a1a18;
+      padding: 28px 22px;
+      margin-bottom: 24px;
+    }
+
+    /* ── Steps ── */
+    .steps { display: flex; align-items: flex-start; justify-content: center; margin-bottom: 28px; }
+    .step { text-align: center; min-width: 52px; }
+    .step-dot {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Montserrat', sans-serif; font-size: 11px; font-weight: 600;
+      margin: 0 auto; border: 1.5px solid #ccc; background: transparent; color: #bbb;
+      transition: all .3s;
+    }
+    .step-dot.active { background: var(--gold-l); border-color: var(--gold-l); color: #fff; }
+    .step-dot.done   { background: var(--gold);   border-color: var(--gold);   color: #fff; }
+    .step-label { margin-top: 4px; font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 1.5px; color: #bbb; font-weight: 600; }
+    .step-label.active { color: var(--gold); }
+    .step-line { height: 1px; width: 28px; background: #e0d5c5; margin-top: 16px; flex-shrink: 0; }
+
+    /* ── Upload zone ── */
+    .upload-zone {
+      border: 1.5px dashed var(--gold-l); border-radius: 16px;
+      padding: 44px 20px; text-align: center; cursor: pointer;
+      background: #fdf9f2; transition: background .2s;
+    }
+    .upload-zone:hover { background: #f9f3e8; }
+    .upload-icon { font-size: 28px; color: var(--gold-l); margin-bottom: 12px; }
+    .upload-title { font-size: 18px; font-weight: 400; color: var(--dark); margin-bottom: 6px; }
+    .upload-hint  { font-family: 'Montserrat', sans-serif; font-size: 12px; color: #aaa; font-weight: 300; letter-spacing: .5px; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 13px 24px; border-radius: 12px; cursor: pointer;
+      font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 2px; font-weight: 600;
+      border: 1.5px solid var(--gold); transition: all .2s;
+      width: 100%; margin-top: 10px;
+    }
+    .btn-gold    { background: var(--gold);   color: #fff; box-shadow: 0 4px 20px #8a6a1a44; }
+    .btn-gold:hover { background: var(--gold-l); }
+    .btn-outline { background: transparent; color: var(--gold); }
+    .btn-outline:hover { background: #f9f3e8; }
+    .btn:disabled { opacity: .6; cursor: not-allowed; }
+
+    /* ── Preview ── */
+    #preview-img { width: 100%; border-radius: 14px; max-height: 280px; object-fit: cover; margin-bottom: 20px; display: none; }
+
+    /* ── Camera ── */
+    #camera-section { display: none; text-align: center; }
+    #video { width: 100%; border-radius: 12px; max-height: 280px; object-fit: cover; margin-bottom: 12px; }
+    .camera-btns { display: flex; gap: 10px; justify-content: center; }
+    .camera-btns .btn { width: auto; margin-top: 0; }
+
+    /* ── Spinner ── */
+    .spinner {
+      display: inline-block; width: 13px; height: 13px;
+      border: 2px solid #fff; border-top-color: transparent;
+      border-radius: 50%; animation: spin .7s linear infinite;
+      vertical-align: middle;
+    }
+
+    /* ── Error box ── */
+    .error-box {
+      background: #fff8f8; border: 1px solid #f0c0b8;
+      border-radius: 12px; padding: 20px; text-align: center; color: #a03020;
+      display: none;
+    }
+    .error-box p { font-size: 14px; margin-bottom: 12px; }
+
+    /* ── Result ── */
+    #result-section { display: none; animation: fadeUp .5s ease; }
+
+    .badge {
+      color: #fff; border-radius: 999px; padding: 8px 20px;
+      font-family: 'Montserrat', sans-serif; font-size: 10px; letter-spacing: 2.5px; font-weight: 600;
+      text-align: center; margin-bottom: 16px; display: block;
+    }
+    .badge-paso1    { background: var(--gold-l); }
+    .badge-completo { background: var(--gold); }
+
+    .result-title { font-size: 22px; font-weight: 400; text-align: center; color: var(--dark); margin-bottom: 20px; }
+
+    .result-section { background: var(--cream); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+    .result-label { font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 2.5px; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
+    .result-text  { font-size: 15px; color: var(--dark); line-height: 1.7; font-weight: 300; }
+
+    .proto-cards { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
+    .proto-card {
+      flex: 1 1 130px; background: var(--cream); border: 1px solid var(--cream2);
+      border-radius: 14px; padding: 14px 12px; text-align: center;
+    }
+    .proto-step { font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 2.5px; color: var(--gold); font-weight: 600; margin-bottom: 4px; }
+    .proto-name { font-size: 15px; font-weight: 400; color: var(--dark); margin-bottom: 4px; }
+    .proto-desc { font-family: 'Montserrat', sans-serif; font-size: 12px; color: var(--mid); line-height: 1.4; font-weight: 300; }
+
+    .aliento {
+      background: linear-gradient(135deg, #fdf4e3, #f5ecda);
+      border: 1px solid var(--cream2); border-radius: 12px;
+      padding: 14px 16px; margin-bottom: 20px; text-align: center;
+    }
+    .aliento p { font-size: 15px; font-style: italic; color: var(--mid); line-height: 1.7; font-weight: 300; }
+
+    .buy-box {
+      background: var(--cream); border: 1px solid var(--cream2);
+      border-radius: 16px; padding: 20px 16px; margin-bottom: 8px; text-align: center;
+    }
+    .buy-box-label { font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 2.5px; color: var(--gold); font-weight: 600; margin-bottom: 4px; }
+    .buy-box-sub   { font-family: 'Montserrat', sans-serif; font-size: 13px; color: var(--mid); font-weight: 300; margin-bottom: 14px; }
+    #shopify-btn   { width: 100%; }
+
+    .small-disclaimer { font-family: 'Montserrat', sans-serif; font-size: 10px; color: #bbb; text-align: center; font-style: italic; line-height: 1.5; margin: 12px 0 8px; }
+
+    /* ── Footer ── */
+    footer { text-align: center; padding: 20px 0 40px; position: relative; z-index: 1; }
+    footer p { font-family: 'Montserrat', sans-serif; font-size: 11px; letter-spacing: 3px; color: var(--mid); }
+    footer small { font-family: 'Montserrat', sans-serif; font-size: 10px; color: #aaa; }
+
+    .hidden { display: none !important; }
+
+    /* Shopify iframe override */
+    .shopify-buy-frame--toggle { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- Header -->
+  <header>
+    <div class="logo-row">
+      <div class="logo-orb">N</div>
+      <span class="logo-text">NUTRAGEN</span>
+    </div>
+    <p class="eyebrow">PLATAFORMA PREMIUM PARA PERSONAS CON PSORIASIS</p>
+    <h1>Tu piel merece<br><em>el protocolo</em></h1>
+    <p class="subhead">natural que funciona</p>
+  </header>
+
+  <!-- Disclaimer -->
+  <div class="disclaimer-bar">
+    <span>◆</span>
+    <p>Esta herramienta NO constituye un diagnóstico médico. El análisis es únicamente orientativo para sugerir qué protocolo natural podría adaptarse mejor a tu caso. Consulta siempre con un profesional de la salud.</p>
+  </div>
+
+  <!-- Card -->
+  <div class="card">
+
+    <!-- Steps -->
+    <div class="steps" id="steps-row">
+      <div class="step">
+        <div class="step-dot active" id="dot-1">I</div>
+        <div class="step-label active" id="lbl-1">FOTO</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-dot" id="dot-2">II</div>
+        <div class="step-label" id="lbl-2">ANÁLISIS</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step">
+        <div class="step-dot" id="dot-3">III</div>
+        <div class="step-label" id="lbl-3">PROTOCOLO</div>
+      </div>
+    </div>
+
+    <!-- Upload -->
+    <div id="upload-section">
+      <div class="upload-zone" id="upload-zone">
+        <div class="upload-icon">✦</div>
+        <p class="upload-title">Sube una foto de tu piel</p>
+        <p class="upload-hint">Toca aquí para seleccionar una imagen</p>
+        <input type="file" id="file-input" accept="image/*" style="display:none" />
+      </div>
+      <button class="btn btn-outline" id="btn-camera">Usar cámara</button>
+    </div>
+
+    <!-- Camera -->
+    <div id="camera-section">
+      <video id="video" autoplay playsinline></video>
+      <div class="camera-btns">
+        <button class="btn btn-gold" id="btn-snap" style="width:auto">Tomar foto</button>
+        <button class="btn btn-outline" id="btn-stop-cam" style="width:auto">Cancelar</button>
+      </div>
+    </div>
+
+    <!-- Preview -->
+    <div id="preview-section" class="hidden">
+      <img id="preview-img" alt="Tu piel" style="display:block" />
+      <button class="btn btn-gold" id="btn-analyze">Analizar mi piel</button>
+      <button class="btn btn-outline" id="btn-change">Cambiar foto</button>
+    </div>
+
+    <!-- Error -->
+    <div class="error-box" id="error-box">
+      <p id="error-msg"></p>
+      <button class="btn btn-outline" id="btn-retry" style="margin:0 auto;width:auto">Intentar de nuevo</button>
+    </div>
+
+    <!-- Result -->
+    <div id="result-section">
+      <span class="badge" id="result-badge"></span>
+      <h2 class="result-title" id="result-title"></h2>
+
+      <div class="result-section">
+        <div class="result-label">LO QUE OBSERVAMOS</div>
+        <p class="result-text" id="result-obs"></p>
+      </div>
+      <div class="result-section">
+        <div class="result-label">POR QUÉ ESTE PROTOCOLO</div>
+        <p class="result-text" id="result-razon"></p>
+      </div>
+
+      <div class="proto-cards" id="proto-cards"></div>
+
+      <div class="aliento">
+        <p id="result-aliento"></p>
+      </div>
+
+      <div class="buy-box">
+        <div class="buy-box-label" id="buy-label"></div>
+        <p class="buy-box-sub" id="buy-sub"></p>
+        <div id="shopify-btn"></div>
+      </div>
+
+      <p class="small-disclaimer" id="result-disclaimer"></p>
+      <button class="btn btn-outline" id="btn-reset">Hacer otro análisis</button>
+    </div>
+
+  </div><!-- /card -->
+
+  <footer>
+    <p>NUTRAGENCENTRAL.COM</p>
+    <small>Esta herramienta no reemplaza la consulta médica profesional.</small>
+  </footer>
+
+</div><!-- /wrap -->
+
+<script>
+// ── Config ────────────────────────────────────────────────────────────────────
+const SHOPIFY_DOMAIN = 'zrm7g9-tg.myshopify.com';
+const SHOPIFY_TOKEN  = 'b6ea891ab442c6979a2f01bcff21c907';
+const PRODUCTS = {
+  paso1:   { id: '9271808786661', nodeId: 'shopify-btn' },
+  paquete: { id: '9271808884965', nodeId: 'shopify-btn' },
+};
+
+const SYS = `Eres el asistente de protocolo de Nutragen Central, la primera plataforma premium en Latinoamérica para el control natural de la psoriasis.
+
+DESCRIPCIÓN OFICIAL DE CADA PRODUCTO
+
+PASO 1 — Crema Nutragen Antibrotes ($1,979 MXN)
+Primera fase del tratamiento. Regenera y calma la piel afectada por psoriasis, dermatitis o eczema.
+Fórmula herbal con extracto de drago y plantas regeneradoras. Actúa desde las capas profundas controlando brotes y promoviendo textura uniforme.
+Beneficios: disminuye descamación, hidrata profundamente, acelera regeneración celular, alivia ardor y comezón inicial.
+Indicada para: brotes en inicio o fase leve, piel que necesita hidratación y regeneración, ardor o comezón moderada, descamación controlable.
+
+PASO 2 — Crema Nutragen Control de Comezón, Dolor e Inflamación ($1,500 MXN)
+Segunda fase. Elimina síntomas persistentes: picazón intensa, dolor y enrojecimiento marcado.
+Contiene extracto de drago y ortiga (antiinflamatorios) más romero y verbena (reparan tejidos).
+Beneficios: controla dolor y comezón intensa, desinfla zonas afectadas, recupera la barrera cutánea, previene nuevos brotes.
+Indicada para: síntomas persistentes, inflamación activa marcada, picazón severa, barrera cutánea dañada.
+
+PAQUETE DOBLE ACCIÓN ($2,857 MXN — Paso 1 + Paso 2)
+Tratamiento completo: el Paso 1 regenera, el Paso 2 elimina inflamación y picazón.
+Para pieles que necesitan regeneración Y control activo de inflamación al mismo tiempo.
+
+CRITERIOS VISUALES
+
+Recomienda "paso1" cuando la imagen muestre:
+• Brote inicial o leve — manchas rosadas, enrojecimiento suave
+• Descamación fina o escasa, escamas pequeñas
+• Piel seca, ardor moderado o comezón leve-moderada
+• Zona pequeña y localizada
+• Sin signos de inflamación intensa ni dolor visible
+• Piel que necesita regeneración e hidratación profunda
+
+Recomienda "completo" cuando la imagen muestre:
+• Placas gruesas, elevadas o con costra
+• Descamación severa — escamas plateadas, gruesas o en capas
+• Enrojecimiento intenso, rojo vivo, bordes marcados o halo inflamatorio
+• Marcas de rascado, excoriaciones, piel lesionada
+• Zonas extensas o múltiples áreas afectadas
+• Lesiones en codos, rodillas, cuero cabelludo, manos o pies
+• Barrera cutánea comprometida — piel abierta, húmeda o con costras
+
+REGLAS:
+- NUNCA emitas diagnósticos médicos.
+- Usa frases como "visualmente se aprecia…", "notamos en la imagen…"
+- En observacion menciona qué características visuales justifican la recomendación.
+- En razon conecta lo observado con los beneficios específicos del producto recomendado.
+- Tono empático, cálido, premium. Español natural de México.
+- Responde ÚNICAMENTE con JSON válido, sin markdown ni texto extra.
+
+{
+  "protocolo": "paso1" | "completo",
+  "titulo": "título corto y elegante",
+  "observacion": "2-3 oraciones describiendo lo que observas y las señales que guiaron la recomendación",
+  "razon": "1-2 oraciones conectando lo observado con los beneficios del producto",
+  "mensaje_aliento": "mensaje corto, cálido y esperanzador",
+  "disclaimer": "Esto no reemplaza la consulta con un profesional de salud."
+}
+
+Si la imagen NO muestra piel o no es clara:
+{ "error": "No pudimos analizar la imagen. Por favor sube una foto nítida de la zona afectada con buena iluminación." }`;
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let imageB64   = null;
+let stream     = null;
+
+// ── DOM refs ──────────────────────────────────────────────────────────────────
+const uploadSection  = document.getElementById('upload-section');
+const cameraSection  = document.getElementById('camera-section');
+const previewSection = document.getElementById('preview-section');
+const previewImg     = document.getElementById('preview-img');
+const errorBox       = document.getElementById('error-box');
+const errorMsg       = document.getElementById('error-msg');
+const resultSection  = document.getElementById('result-section');
+const stepsRow       = document.getElementById('steps-row');
+const fileInput      = document.getElementById('file-input');
+const video          = document.getElementById('video');
+
+// ── Step manager ──────────────────────────────────────────────────────────────
+function setStep(step) {
+  // step = 1, 2, or 3
+  [1,2,3].forEach(i => {
+    const dot = document.getElementById('dot-'+i);
+    const lbl = document.getElementById('lbl-'+i);
+    dot.className = 'step-dot' + (i < step ? ' done' : i === step ? ' active' : '');
+    dot.textContent = i < step ? '✓' : (i===1?'I':i===2?'II':'III');
+    lbl.className = 'step-label' + (i === step ? ' active' : '');
+  });
+}
+
+// ── Sections toggle ───────────────────────────────────────────────────────────
+function showOnly(id) {
+  [uploadSection, cameraSection, previewSection, errorBox, resultSection].forEach(el => {
+    el.style.display = 'none';
+  });
+  stepsRow.style.display = 'flex';
+  if (id === 'result') {
+    resultSection.style.display = 'block';
+    stepsRow.style.display = 'none';
+  } else if (id === 'upload')  { uploadSection.style.display  = 'block'; }
+  else if (id === 'camera')    { cameraSection.style.display  = 'block'; }
+  else if (id === 'preview')   { previewSection.style.display = 'block'; }
+  else if (id === 'error')     { errorBox.style.display       = 'block'; }
+}
+
+// ── File upload ───────────────────────────────────────────────────────────────
+document.getElementById('upload-zone').addEventListener('click', () => fileInput.click());
+fileInput.addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    imageB64 = ev.target.result.split(',')[1];
+    previewImg.src = ev.target.result;
+    showOnly('preview');
+    setStep(2);
+  };
+  reader.readAsDataURL(file);
+});
+
+// ── Camera ────────────────────────────────────────────────────────────────────
+document.getElementById('btn-camera').addEventListener('click', async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    video.srcObject = stream;
+    showOnly('camera');
+    setStep(1);
+  } catch {
+    showError('No se pudo acceder a la cámara. Por favor sube una foto.');
+  }
+});
+
+document.getElementById('btn-snap').addEventListener('click', () => {
+  const canvas = document.createElement('canvas');
+  canvas.width  = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg');
+  imageB64 = dataUrl.split(',')[1];
+  previewImg.src = dataUrl;
+  stopCamera();
+  showOnly('preview');
+  setStep(2);
+});
+
+document.getElementById('btn-stop-cam').addEventListener('click', () => {
+  stopCamera();
+  showOnly('upload');
+  setStep(1);
+});
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  showOnly('upload');
+}
+
+// ── Change photo ──────────────────────────────────────────────────────────────
+document.getElementById('btn-change').addEventListener('click', reset);
+
+// ── Analyze ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-analyze').addEventListener('click', analyze);
+
+async function analyze() {
+  if (!imageB64) return;
+  const btn = document.getElementById('btn-analyze');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Analizando tu piel…';
+  setStep(2);
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        system: SYS,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: imageB64 } },
+            { type: 'text',  text: 'Analiza esta imagen y recomiéndame mi protocolo Nutragen.' }
+          ]
+        }]
+      })
+    });
+
+    const data  = await res.json();
+    const text  = (data.content || []).map(b => b.text || '').join('');
+    const clean = text.replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(clean);
+
+    if (parsed.error) {
+      showError(parsed.error);
+    } else {
+      showResult(parsed);
+    }
+  } catch (e) {
+    showError('Hubo un error al analizar. Por favor inténtalo de nuevo.');
+  }
+
+  btn.disabled = false;
+  btn.textContent = 'Analizar mi piel';
+}
+
+// ── Show result ───────────────────────────────────────────────────────────────
+function showResult(r) {
+  const full = r.protocolo === 'completo';
+
+  document.getElementById('result-badge').textContent  = full ? 'PROTOCOLO COMPLETO · PASO 1 + PASO 2' : 'PROTOCOLO · PASO 1';
+  document.getElementById('result-badge').className    = 'badge ' + (full ? 'badge-completo' : 'badge-paso1');
+  document.getElementById('result-title').textContent  = r.titulo;
+  document.getElementById('result-obs').textContent    = r.observacion;
+  document.getElementById('result-razon').textContent  = r.razon;
+  document.getElementById('result-aliento').textContent = '✦ ' + r.mensaje_aliento;
+  document.getElementById('result-disclaimer').textContent = r.disclaimer;
+
+  // Protocol cards
+  const cards = document.getElementById('proto-cards');
+  cards.innerHTML = `
+    <div class="proto-card">
+      <div class="proto-step">PASO 1</div>
+      <div class="proto-name">Crema Antibrotes</div>
+      <div class="proto-desc">Regenera e hidrata profundamente.</div>
+    </div>
+    ${full ? `
+    <div class="proto-card">
+      <div class="proto-step">PASO 2</div>
+      <div class="proto-name">Crema Control</div>
+      <div class="proto-desc">Elimina inflamación y picazón intensa.</div>
+    </div>` : ''}
+  `;
+
+  // Buy box labels
+  document.getElementById('buy-label').textContent = full
+    ? 'PAQUETE NUTRAGEN · KIT DOBLE ACCIÓN'
+    : 'NUTRAGEN · CREMA ANTIBROTES PASO 1';
+  document.getElementById('buy-sub').textContent = full
+    ? 'Protocolo completo Paso 1 + Paso 2 · $2,857 MXN'
+    : 'Tratamiento base regenerador · $1,979 MXN';
+
+  showOnly('result');
+  setStep(3);
+
+  // Load Shopify button
+  const productKey = full ? 'paquete' : 'paso1';
+  loadShopifyButton(productKey);
+}
+
+// ── Shopify Buy Button ────────────────────────────────────────────────────────
+function loadShopifyButton(key) {
+  const { id } = PRODUCTS[key];
+  const node = document.getElementById('shopify-btn');
+  node.innerHTML = '';
+
+  function initBtn() {
+    if (!window.ShopifyBuy || !window.ShopifyBuy.UI) {
+      return setTimeout(initBtn, 200);
+    }
+    node.innerHTML = '';
+    const client = window.ShopifyBuy.buildClient({
+      domain: SHOPIFY_DOMAIN,
+      storefrontAccessToken: SHOPIFY_TOKEN,
+    });
+    window.ShopifyBuy.UI.onReady(client).then(ui => {
+      ui.createComponent('product', {
+        id,
+        node,
+        moneyFormat: '%24%20%7B%7Bamount%7D%7D',
+        options: {
+          product: {
+            styles: {
+              product: { '@media (min-width: 601px)': { 'max-width': '100%', 'margin-left': '0px' } },
+              button: {
+                'background-color': '#8a6a1a',
+                'font-family': "'Montserrat', sans-serif",
+                'font-size': '12px',
+                'letter-spacing': '2px',
+                'padding-top': '14px',
+                'padding-bottom': '14px',
+                'border-radius': '12px',
+                ':hover': { 'background-color': '#b8963e' },
+                ':focus': { 'background-color': '#b8963e' },
+              },
+            },
+            buttonDestination: 'checkout',
+            contents: { img: false, title: false, price: false },
+            text: { button: '¡COMPRAR AHORA!' },
+          },
+          cart:   { text: { total: 'Subtotal', button: 'Finalizar Compra' } },
+          toggle: {},
+        },
+      });
+    });
+  }
+
+  if (!window.ShopifyBuy) {
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://sdks.shopifycdn.com/buy-button/latest/buy-button-storefront.min.js';
+    s.onload = initBtn;
+    document.head.appendChild(s);
+  } else {
+    initBtn();
+  }
+}
+
+// ── Error ─────────────────────────────────────────────────────────────────────
+function showError(msg) {
+  errorMsg.textContent = msg;
+  showOnly('error');
+  setStep(1);
+}
+
+document.getElementById('btn-retry').addEventListener('click', reset);
+
+// ── Reset ─────────────────────────────────────────────────────────────────────
+document.getElementById('btn-reset').addEventListener('click', reset);
+
+function reset() {
+  imageB64 = null;
+  fileInput.value = '';
+  previewImg.src = '';
+  document.getElementById('shopify-btn').innerHTML = '';
+  showOnly('upload');
+  setStep(1);
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+showOnly('upload');
+setStep(1);
+</script>
+
+</body>
+</html>
