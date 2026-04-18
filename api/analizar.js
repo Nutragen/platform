@@ -1,4 +1,9 @@
+export const config = { api: { bodyParser: { sizeLimit: "10mb" } } };
+
 export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "POST");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
   if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
 
   const { imageB64, mediaType } = req.body;
@@ -54,11 +59,32 @@ REGLAS:
 {
   "protocolo": "paso1" | "completo",
   "titulo": "título corto y elegante",
-  "observacion": "2-3 oraciones describiendo lo que observas y las señales que guiaron la recomendación",
-  "razon": "1-2 oraciones conectando lo observado con los beneficios del producto",
+  "observacion": "2-3 oraciones describiendo lo que observas visualmente y qué señales específicas guiaron la recomendación",
+  "razon": "1-2 oraciones conectando lo observado con los beneficios del producto recomendado",
+  "recomendaciones": [
+    "recomendación específica 1 basada en la severidad visual observada (estrés, sueño, hábito específico)",
+    "recomendación específica 2 distinta (puede ser sobre manejo emocional, exposición solar, ropa, jabones)",
+    "recomendación específica 3 distinta (puede ser sobre hidratación, rutina de aplicación, temperatura del agua)"
+  ],
+  "alimentos_evitar": [
+    "alimento o consumo específico 1 que agrava psoriasis",
+    "alimento o consumo específico 2",
+    "alimento o consumo específico 3"
+  ],
   "mensaje_aliento": "mensaje corto, cálido y esperanzador",
   "disclaimer": "Esto no reemplaza la consulta con un profesional de salud."
 }
+
+REGLAS PARA recomendaciones y alimentos_evitar:
+- Basa la selección en la SEVERIDAD visual observada:
+  · Inflamación intensa / placas gruesas → prioriza reducción de estrés crónico, omega-3, evitar gluten y alcohol
+  · Piel seca / descamación moderada → prioriza hidratación interna, grasas saludables, evitar lácteos procesados
+  · Zonas extensas → menciona impacto del cortisol, sueño reparador, evitar azúcar refinada
+  · Zona cuero cabelludo → agua con cloro, champús agresivos, sulfatos
+- VARÍA las recomendaciones según cada análisis. NUNCA copies la misma lista genérica.
+- Sé específico: en lugar de "reduce el estrés" di "practica 10 minutos de respiración diafragmática antes de dormir"
+- Alimentos que agravan psoriasis: alcohol, gluten, lácteos procesados, azúcar refinada, carne roja en exceso, nightshades (jitomate, chile, berenjena) en casos severos, alimentos ultra-procesados, comida frita, refrescos.
+- Hábitos que agravan: estrés crónico, falta de sueño, tabaquismo, AINES (ibuprofeno), jabones con sulfatos, ropa sintética en zonas afectadas, agua muy caliente en la ducha, rascado.
 
 Si la imagen NO muestra piel o no es clara:
 { "error": "No pudimos analizar la imagen. Por favor sube una foto nítida de la zona afectada con buena iluminación." }`;

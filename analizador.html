@@ -2,21 +2,17 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-    <meta name="theme-color" content="#FAF7F2">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Analizador de Protocolo · Nutragen</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400;1,600&family=Montserrat:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <style>
-html{background:#FAF7F2!important;background-color:#FAF7F2!important;}
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --gold:   #8a6a1a;
       --gold-l: #b8963e;
-      --cream:  #FAF7F2;
+      --cream:  #f2ece0;
       --cream2: #e8e0d0;
       --dark:   #2c2015;
       --mid:    #6b5535;
@@ -159,11 +155,11 @@ html{background:#FAF7F2!important;background-color:#FAF7F2!important;}
     .badge-paso1    { background: var(--gold-l); }
     .badge-completo { background: var(--gold); }
 
-    .result-title { font-size: 22px; font-weight: 400; text-align: center; color: var(--dark); margin-bottom: 20px; }
+    .result-title { font-size: 28px; font-weight: 700; text-align: center; color: var(--dark); margin-bottom: 20px; line-height: 1.2; }
 
     .result-section { background: var(--cream); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
-    .result-label { font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 2.5px; color: var(--gold); font-weight: 600; margin-bottom: 6px; }
-    .result-text  { font-size: 15px; color: var(--dark); line-height: 1.7; font-weight: 300; }
+    .result-label { font-family: var(--font-body); font-size: 11px; letter-spacing: 2.5px; color: var(--gold); font-weight: 800; margin-bottom: 8px; text-transform: uppercase; }
+    .result-text  { font-size: 16px; color: var(--dark); line-height: 1.8; font-weight: 500; }
 
     .proto-cards { display: flex; gap: 10px; margin-bottom: 16px; flex-wrap: wrap; }
     .proto-card {
@@ -171,15 +167,15 @@ html{background:#FAF7F2!important;background-color:#FAF7F2!important;}
       border-radius: 14px; padding: 14px 12px; text-align: center;
     }
     .proto-step { font-family: 'Montserrat', sans-serif; font-size: 9px; letter-spacing: 2.5px; color: var(--gold); font-weight: 600; margin-bottom: 4px; }
-    .proto-name { font-size: 15px; font-weight: 400; color: var(--dark); margin-bottom: 4px; }
-    .proto-desc { font-family: 'Montserrat', sans-serif; font-size: 12px; color: var(--mid); line-height: 1.4; font-weight: 300; }
+    .proto-name { font-size: 16px; font-weight: 700; color: var(--dark); margin-bottom: 4px; }
+    .proto-desc { font-family: var(--font-body); font-size: 13px; color: var(--mid); line-height: 1.4; font-weight: 400; }
 
     .aliento {
       background: linear-gradient(135deg, #fdf4e3, #f5ecda);
       border: 1px solid var(--cream2); border-radius: 12px;
       padding: 14px 16px; margin-bottom: 20px; text-align: center;
     }
-    .aliento p { font-size: 15px; font-style: italic; color: var(--mid); line-height: 1.7; font-weight: 300; }
+    .aliento p { font-size: 17px; font-style: italic; color: var(--mid); line-height: 1.7; font-weight: 500; }
 
     .buy-box {
       background: var(--cream); border: 1px solid var(--cream2);
@@ -198,6 +194,32 @@ html{background:#FAF7F2!important;background-color:#FAF7F2!important;}
 
     .hidden { display: none !important; }
 
+
+
+    /* ── Lifestyle sections ── */
+    .lifestyle-box {
+      border-radius: 14px; padding: 18px 16px; margin-bottom: 12px;
+    }
+    .lifestyle-box.recomendaciones {
+      background: linear-gradient(135deg, #f9f5eb, #f2ebe0);
+      border: 1px solid #ddd0b8;
+    }
+    .lifestyle-box.alimentos {
+      background: linear-gradient(135deg, #fdf0f0, #f9e8e8);
+      border: 1px solid #e8c8c8;
+    }
+    .lifestyle-label {
+      font-family: var(--font-body); font-size: 11px; letter-spacing: 2.5px;
+      font-weight: 800; margin-bottom: 12px; text-transform: uppercase;
+    }
+    .lifestyle-box.recomendaciones .lifestyle-label { color: var(--gold); }
+    .lifestyle-box.alimentos .lifestyle-label { color: #a05050; }
+    .lifestyle-item {
+      display: flex; align-items: flex-start; gap: 10px;
+      margin-bottom: 8px; font-size: 14px; line-height: 1.6; font-weight: 500; color: var(--dark);
+    }
+    .lifestyle-item:last-child { margin-bottom: 0; }
+    .lifestyle-icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
 
     /* ── Step-down box (Paso 1 fallback for completo) ── */
     .stepdown-box {
@@ -321,6 +343,18 @@ html{background:#FAF7F2!important;background-color:#FAF7F2!important;}
       </div>
 
       <div class="proto-cards" id="proto-cards"></div>
+
+      <!-- Lifestyle recommendations -->
+      <div class="lifestyle-box recomendaciones" id="lifestyle-recomendaciones">
+        <div class="lifestyle-label">✦ RECOMENDACIONES PARA TU CASO</div>
+        <div id="lifestyle-rec-items"></div>
+      </div>
+
+      <!-- Alimentos a evitar -->
+      <div class="lifestyle-box alimentos" id="lifestyle-alimentos">
+        <div class="lifestyle-label">⚠ EVITA ESTOS PARA REDUCIR BROTES</div>
+        <div id="lifestyle-ali-items"></div>
+      </div>
 
       <div class="aliento">
         <p id="result-aliento"></p>
@@ -503,6 +537,18 @@ function showResult(r) {
   document.getElementById('result-obs').textContent    = r.observacion;
   document.getElementById('result-razon').textContent  = r.razon;
   document.getElementById('result-aliento').textContent = '✦ ' + r.mensaje_aliento;
+
+  // Lifestyle recommendations
+  const recItems = document.getElementById('lifestyle-rec-items');
+  recItems.innerHTML = (r.recomendaciones || []).map(rec =>
+    `<div class="lifestyle-item"><span class="lifestyle-icon">🌿</span><span>${rec}</span></div>`
+  ).join('');
+
+  // Alimentos a evitar
+  const aliItems = document.getElementById('lifestyle-ali-items');
+  aliItems.innerHTML = (r.alimentos_evitar || []).map(ali =>
+    `<div class="lifestyle-item"><span class="lifestyle-icon">✕</span><span>${ali}</span></div>`
+  ).join('');
   document.getElementById('result-disclaimer').textContent = r.disclaimer;
 
   // Protocol cards
