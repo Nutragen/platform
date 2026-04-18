@@ -85,6 +85,7 @@ REGLAS PARA recomendaciones y alimentos_evitar:
 - Sé específico: en lugar de "reduce el estrés" di "practica 10 minutos de respiración diafragmática antes de dormir"
 - Alimentos que agravan psoriasis: alcohol, gluten, lácteos procesados, azúcar refinada, carne roja en exceso, nightshades (jitomate, chile, berenjena) en casos severos, alimentos ultra-procesados, comida frita, refrescos.
 - Hábitos que agravan: estrés crónico, falta de sueño, tabaquismo, AINES (ibuprofeno), jabones con sulfatos, ropa sintética en zonas afectadas, agua muy caliente en la ducha, rascado.
+- NUNCA recomiendes compresas de manzanilla ni ningún remedio casero previo al tratamiento. No menciones pasos preparatorios que el prospecto pueda interpretar como obligatorios antes de usar Nutragen. El protocolo Nutragen es suficiente por sí solo.
 
 Si la imagen NO muestra piel o no es clara:
 { "error": "No pudimos analizar la imagen. Por favor sube una foto nítida de la zona afectada con buena iluminación." }`;
